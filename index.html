@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-нолики</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Крестики-нолики</h1>
+    <div id="game-mode">
+        <label>
+            <input type="radio" name="mode" value="player" checked> Игра с другом
+        </label>
+        <label>
+            <input type="radio" name="mode" value="ai"> Игра с ИИ
+        </label>
+    </div>
+    <div id="game">
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+        <div class="cell" data-cell></div>
+    </div>
+    <button id="restartButton">Перезапустить игру</button>
+    <script src="script.js"></script>
+</body>
+</html>
