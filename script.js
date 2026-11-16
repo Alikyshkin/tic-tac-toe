@@ -1,101 +1,100 @@
-// script.js
-const cells = document.querySelectorAll('[data-cell]');
-const restartButton = document.getElementById('restartButton');
-const X_CLASS = 'x';
-const CIRCLE_CLASS = 'circle';
-const WINNING_COMBINATIONS = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6]
-];
-let circleTurn;
-let isAiMode = false;
+'use strict';
 
-const modeRadios = document.getElementsByName('mode');
-modeRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-        isAiMode = e.target.value === 'ai';
-        startGame();
+const cells = Array.from(document.querySelectorAll('[data-cell]'));
+const status = document.getElementById('game-status');
+const restartButton = document.getElementById('restartButton');
+const modes = Array.from(document.querySelectorAll('input[name="mode"]'));
+const lines = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6],
+];
+const names = { x: 'Крестик', o: 'Нолик' };
+const botPreference = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+let board;
+let turn;
+let winningLine;
+let finished;
+let botTimer;
+
+function winningCells(position, mark) {
+    return lines.find(line => line.every(index => position[index] === mark));
+}
+
+function render(message) {
+    status.textContent = message;
+    const locked = finished || botTimer !== undefined;
+    cells.forEach((cell, index) => {
+        const mark = board[index];
+        const row = Math.floor(index / 3) + 1;
+        const column = index % 3 + 1;
+        cell.classList.toggle('cell--x', mark === 'x');
+        cell.classList.toggle('cell--o', mark === 'o');
+        cell.classList.toggle('cell--win', Boolean(winningLine?.includes(index)));
+        cell.setAttribute('aria-disabled', String(locked || Boolean(mark)));
+        cell.setAttribute('aria-label', `Ряд ${row}, столбец ${column}: ${names[mark] ?? 'пусто'}`);
+    });
+}
+
+function startGame() {
+    window.clearTimeout(botTimer);
+    botTimer = undefined;
+    board = Array(9).fill(null);
+    turn = 'x';
+    winningLine = undefined;
+    finished = false;
+    render('Ход крестиков');
+}
+
+function chooseBotMove() {
+    const open = botPreference.filter(index => board[index] === null);
+    for (const mark of ['o', 'x']) {
+        const best = open.find(index => {
+            const next = [...board];
+            next[index] = mark;
+            return winningCells(next, mark);
+        });
+        if (best !== undefined) return best;
+    }
+    return open[0];
+}
+
+function play(index) {
+    board[index] = turn;
+    winningLine = winningCells(board, turn);
+    if (winningLine) {
+        finished = true;
+        render(turn === 'x' ? 'Крестики победили' : 'Нолики победили');
+        return;
+    }
+    if (board.every(Boolean)) {
+        finished = true;
+        render('Ничья');
+        return;
+    }
+
+    turn = turn === 'x' ? 'o' : 'x';
+    if (turn === 'o' && modes[1].checked) {
+        botTimer = window.setTimeout(() => {
+            botTimer = undefined;
+            play(chooseBotMove());
+        }, 250);
+        render('Ход компьютера');
+        return;
+    }
+    render(turn === 'x' ? 'Ход крестиков' : 'Ход ноликов');
+}
+
+cells.forEach((cell, index) => {
+    cell.addEventListener('click', () => {
+        if (finished || botTimer !== undefined || board[index]) return;
+        play(index);
     });
 });
 
-startGame();
-
-restartButton.addEventListener('click', startGame);
-
-function startGame() {
-    circleTurn = false;
-    cells.forEach(cell => {
-        cell.classList.remove(X_CLASS);
-        cell.classList.remove(CIRCLE_CLASS);
-        cell.removeEventListener('click', handleClick);
-        cell.addEventListener('click', handleClick, { once: true });
-    });
-}
-
-function handleClick(e) {
-    const cell = e.target;
-    const currentClass = circleTurn ? CIRCLE_CLASS : X_CLASS;
-    placeMark(cell, currentClass);
-    if (checkWin(currentClass)) {
-        setTimeout(() => endGame(false), 100);
-    } else if (isDraw()) {
-        setTimeout(() => endGame(true), 100);
-    } else {
-        swapTurns();
-        if (isAiMode && circleTurn) {
-            setTimeout(aiMove, 100);
-        }
-    }
-}
-
-function placeMark(cell, currentClass) {
-    cell.classList.add(currentClass);
-}
-
-function swapTurns() {
-    circleTurn = !circleTurn;
-}
-
-function checkWin(currentClass) {
-    return WINNING_COMBINATIONS.some(combination => {
-        return combination.every(index => {
-            return cells[index].classList.contains(currentClass);
-        });
-    });
-}
-
-function isDraw() {
-    return [...cells].every(cell => {
-        return cell.classList.contains(X_CLASS) || cell.classList.contains(CIRCLE_CLASS);
-    });
-}
-
-function endGame(draw) {
-    if (draw) {
-        alert('Ничья!');
-    } else {
-        alert(`${circleTurn ? "Нолики" : "Крестики"} победили!`);
-    }
+modes.forEach(mode => mode.addEventListener('change', startGame));
+restartButton.addEventListener('click', () => {
     startGame();
-}
-
-function aiMove() {
-    const availableCells = [...cells].filter(cell => {
-        return !cell.classList.contains(X_CLASS) && !cell.classList.contains(CIRCLE_CLASS);
-    });
-    const randomIndex = Math.floor(Math.random() * availableCells.length);
-    placeMark(availableCells[randomIndex], CIRCLE_CLASS);
-    if (checkWin(CIRCLE_CLASS)) {
-        setTimeout(() => endGame(false), 100);
-    } else if (isDraw()) {
-        setTimeout(() => endGame(true), 100);
-    } else {
-        swapTurns();
-    }
-}
+    cells[0].focus();
+});
+startGame();
